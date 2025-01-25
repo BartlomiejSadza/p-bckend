@@ -1,54 +1,46 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from typing import List, Optional
 from weatherClass import WeatherService
 from weeklySummaryClass import WeeklySummaryService
-import os
 
-class FlaskApp:
+class FastAPIApp:
     def __init__(self):
-        self.app = Flask(__name__)
-        CORS(self.app)
+        self.app = FastAPI()
         self.weather_service = WeatherService()
         self.weekly_service = WeeklySummaryService()
-        self.register_routes()
+        self.setup_cors()
+        self.setup_routes()
 
-    def register_routes(self):
-        self.app.route("/")(self.home)
-        self.app.route("/forecast", methods=["GET"])(self.forecast)
-        self.app.route("/weekly_summary", methods=["GET"])(self.weekly_summary)
+    def setup_cors(self):
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
-    def home(self):
-        return jsonify({
-            "status": "running",
-            "endpoints": [
-                "/forecast?lat=52.2&lon=21",
-                "/weekly_summary?lat=52.2&lon=21"
-            ]
-        })
+    def setup_routes(self):
+        @self.app.get("/")
+        async def home():
+            return {
+                "status": "running",
+                "endpoints": [
+                    "/forecast?lat=52.2&lon=21",
+                    "/weekly_summary?lat=52.2&lon=21"
+                ]
+            }
 
-    def forecast(self):
-        lat = request.args.get("lat")
-        lon = request.args.get("lon")
-        if not lat or not lon:
-            return jsonify({"error": "Missing parameters. Use: /forecast?lat=52.2&lon=21"}), 400
-        
-        data = self.weather_service.get_weather(lat, lon)
-        return jsonify(data)
+        @self.app.get("/forecast")
+        async def forecast(lat: float, lon: float):
+            if not lat or not lon:
+                raise HTTPException(status_code=400, detail="Missing parameters")
+            return self.weather_service.get_weather(lat, lon)
 
-    def weekly_summary(self):
-        lat = request.args.get("lat")
-        lon = request.args.get("lon")
-        if not lat or not lon:
-            return jsonify({"error": "Missing parameters. Use: /weekly_summary?lat=52.2&lon=21"}), 400
-            
-        data = self.weekly_service.get_weather_summary(lat, lon)
-        return jsonify(data)
+        @self.app.get("/weekly_summary")
+        async def weekly_summary(lat: float, lon: float):
+            if not lat or not lon:
+                raise HTTPException(status_code=400, detail="Missing parameters")
+            return self.weekly_service.get_weather_summary(lat, lon)
 
-    def run(self):
-        self.app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-
-flask_app = FlaskApp()
-app = flask_app.app
-
-if __name__ == "__main__":
-    flask_app.run()
+app = FastAPIApp().app
