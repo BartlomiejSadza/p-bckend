@@ -1,1 +1,1 @@
-web: uvicorn app:app --host 0.0.0.0 --port 8000
+web: gunicorn -w 4 -k uvicorn.workers.UvicornWorke --timeout 30 app:app
