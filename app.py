@@ -45,7 +45,7 @@ class FlaskApp:
         return jsonify(data)
 
     def run(self):
-        self.app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+        self.app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
 
 flask_app = FlaskApp()
 app = flask_app.app
